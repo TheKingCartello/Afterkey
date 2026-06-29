@@ -6,14 +6,17 @@ const switchRoutes = require('./routes/switch');
 const checkinRoutes = require('./routes/checkin');
 const { startMonitor, checkSwitches } = require('./agent/monitor');
 
-
 app.use(cors())
 app.use(express.json());
-app.use(express.static('../frontend'));
+
+app.get('/', (req, res) => {
+  res.json({ status: 'AfterKey API is running' })
+})
+
 app.use('/api/switch', switchRoutes);
 app.use('/api/checkin', checkinRoutes);
 
-// Routes will go here as we build them
+app.use(express.static('../frontend'));
 
 const PORT = process.env.PORT || 3000;
 startMonitor();
