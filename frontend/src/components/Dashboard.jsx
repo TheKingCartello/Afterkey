@@ -20,7 +20,7 @@ function Dashboard({ switchData, setSwitchData }) {
     setLoading(true)
     setMessage(null)
     try {
-      const res = await fetch(`http://localhost:3000/api/checkin/${switchData.userId}`, {
+      const res = await fetch(`https://your-railway-url.up.railway.app/api/checkin/${switchData.userId}`, {
         method: 'POST'
       })
       const data = await res.json()
