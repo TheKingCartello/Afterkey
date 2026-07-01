@@ -40,7 +40,7 @@ function Setup({ setSwitchData }) {
     setError(null)
 
     try {
-      const res = await fetch('https://your-railway-url.up.railway.app/api/switch/create', {
+      const res = await fetch('https://afterkey-production.up.railway.app/api/switch/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: wallet, ...form })
