@@ -10,7 +10,9 @@ function Dashboard({ switchData, setSwitchData }) {
   const totalMs = switchData.intervalDays * 24 * 60 * 60 * 1000
   const remainingMs = Math.max(deadline - now, 0)
   const elapsed = Math.min((totalMs - remainingMs) / totalMs, 1)
-  const daysLeft = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+  const daysLeft = remainingMs < 1000 * 60 * 60 * 24
+  ? `${Math.ceil(remainingMs / (1000 * 60))}m`
+  : Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
 
   const circumference = 2 * Math.PI * 54
   const strokeDashoffset = circumference * (1 - elapsed)
@@ -56,7 +58,7 @@ function Dashboard({ switchData, setSwitchData }) {
           </svg>
           <div className="ring-label">
             <span className="days-left">{daysLeft}</span>
-            <span className="days-text">days left</span>
+            <span className="days-text">{remainingMs < 1000 * 60 * 60 * 24 ? 'left' : 'days left'}</span>
           </div>
         </div>
 
