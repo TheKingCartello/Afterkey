@@ -1,40 +1,68 @@
-const fs = require('fs');
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
-const DB_PATH = path.join(__dirname, 'data.json');
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
-// Create the file if it doesn't exist
-if (!fs.existsSync(DB_PATH)) {
-  fs.writeFileSync(DB_PATH, JSON.stringify({ switches: {} }));
+async function getSwitch(userId) {
+  const { data } = await supabase
+    .from('switches')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+  return data ? mapFromDB(data) : null;
 }
 
-function readDB() {
-  const raw = fs.readFileSync(DB_PATH, 'utf-8');
-  return JSON.parse(raw);
+async function saveSwitch(userId, sw) {
+  await supabase
+    .from('switches')
+    .upsert(mapToDB(sw));
 }
 
-function writeDB(data) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+async function deleteSwitch(userId) {
+  await supabase
+    .from('switches')
+    .delete()
+    .eq('user_id', userId);
 }
 
-function getSwitch(userId) {
-  return readDB().switches[userId] || null;
+async function getAllSwitches() {
+  const { data } = await supabase
+    .from('switches')
+    .select('*');
+  const result = {};
+  (data || []).forEach(row => result[row.user_id] = mapFromDB(row));
+  return result;
 }
 
-function saveSwitch(userId, switchData) {
-  const db = readDB();
-  db.switches[userId] = switchData;
-  writeDB(db);
+// Supabase uses snake_case columns, our app uses camelCase — these convert between them
+function mapToDB(sw) {
+  return {
+    user_id: sw.userId,
+    beneficiary: sw.beneficiary,
+    interval_days: sw.intervalDays,
+    amount: sw.amount,
+    created_at: sw.createdAt,
+    last_checkin: sw.lastCheckin,
+    status: sw.status,
+    workflow_id: sw.workflowId,
+    tx_history: sw.txHistory
+  };
 }
 
-function deleteSwitch(userId) {
-  const db = readDB();
-  delete db.switches[userId];
-  writeDB(db);
-}
-
-function getAllSwitches() {
-  return readDB().switches;
+function mapFromDB(row) {
+  return {
+    userId: row.user_id,
+    beneficiary: row.beneficiary,
+    intervalDays: row.interval_days,
+    amount: row.amount,
+    createdAt: row.created_at,
+    lastCheckin: row.last_checkin,
+    status: row.status,
+    workflowId: row.workflow_id,
+    txHistory: row.tx_history || []
+  };
 }
 
 module.exports = { getSwitch, saveSwitch, deleteSwitch, getAllSwitches };
