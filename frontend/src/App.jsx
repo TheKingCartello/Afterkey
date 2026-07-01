@@ -14,7 +14,7 @@ function App() {
       setLoading(false)
       return
     }
-    fetch(`http://localhost:3000/api/switch/${userId}`)
+    fetch(`https://afterkey-production.up.railway.app/api/switch/${userId}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         setSwitchData(data)
