@@ -454,3 +454,19 @@ header {
 }
 
 .btn-switch-wallet:hover { color: var(--text); }
+
+.tx-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.tx-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+  padding-left: 0.25rem;
+}

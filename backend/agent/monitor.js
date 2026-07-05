@@ -54,9 +54,19 @@ async function pollExecutionStatus(userId, executionId) {
       if (status === 'completed' || status === 'failed') {
         const sw = await getSwitch(userId);
         if (sw) {
-          sw.txHistory = sw.txHistory.map(tx =>
+            sw.txHistory = sw.txHistory.map(tx =>
             tx.executionId === executionId
-              ? { ...tx, status, transactionHash }
+              ? { 
+                  ...tx, 
+                  status,
+                  transactionHash,
+                  transactionLink: response.data.transactionLink,
+                  gasUsedWei: response.data.gasUsedWei,
+                  gasPriceWei: response.data.gasPriceWei,
+                  estimatedCostUsd: response.data.estimatedCostUsd,
+                  retryCount: response.data.retryCount,
+                  completedAt: response.data.completedAt
+                }
               : tx
           );
           await saveSwitch(userId, sw);

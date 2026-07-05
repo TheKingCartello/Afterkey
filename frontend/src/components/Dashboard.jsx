@@ -94,16 +94,19 @@ function Dashboard({ switchData, setSwitchData }) {
           ? <p className="empty">No transactions yet. Your switch is watching.</p>
           : switchData.txHistory.map((tx, i) => (
             <div className="tx-row" key={i}>
-              <span>{new Date(tx.triggeredAt).toLocaleDateString()}</span>
-              <span className={`badge ${tx.status}`}>{tx.status}</span>
-              {tx.executionId && (
-                
-                <a  href={`https://sepolia.etherscan.io/tx/${tx.executionId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View
-                </a>
+              <div className="tx-main">
+                <span>{new Date(tx.triggeredAt).toLocaleDateString()}</span>
+                <span className={`badge ${tx.status}`}>{tx.status}</span>
+                {tx.transactionLink && (
+                  <a href={tx.transactionLink} target="_blank" rel="noreferrer">View</a>
+                )}
+              </div>
+              {tx.completedAt && (
+                <div className="tx-details">
+                  {tx.retryCount > 0 && <span>🔄 {tx.retryCount} retr{tx.retryCount === 1 ? 'y' : 'ies'}</span>}
+                  {tx.gasUsedWei && <span>⛽ {Number(tx.gasUsedWei).toLocaleString()} wei</span>}
+                  {tx.completedAt && <span>✅ {new Date(tx.completedAt).toLocaleTimeString()}</span>}
+                </div>
               )}
             </div>
           ))
