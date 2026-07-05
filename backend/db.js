@@ -17,7 +17,7 @@ async function getSwitch(userId) {
 async function saveSwitch(userId, sw) {
   await supabase
     .from('switches')
-    .upsert(mapToDB(sw));
+    .upsert(mapToDB(sw), {onConflict: 'user_id'});
 }
 
 async function deleteSwitch(userId) {
