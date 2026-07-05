@@ -442,3 +442,15 @@ header {
   color: var(--muted);
   line-height: 1.5;
 }
+
+.btn-switch-wallet {
+  margin-left: auto;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-switch-wallet:hover { color: var(--text); }

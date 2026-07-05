@@ -71,10 +71,13 @@ function Setup({ setSwitchData }) {
             Connect Wallet
           </button>
         ) : (
-          <div className="wallet-connected">
+         <div className="wallet-connected">
             <span className="dot" />
             <span className="wallet-address">{wallet.slice(0, 6)}...{wallet.slice(-4)}</span>
             <span className="connected-label">Connected</span>
+            <button type="button" className="btn-switch-wallet" onClick={() => setWallet(null)}>
+              Switch
+            </button>
           </div>
         )}
 

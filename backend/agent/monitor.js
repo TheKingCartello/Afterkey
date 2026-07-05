@@ -13,9 +13,9 @@ async function executeTransfer(sw) {
     console.log(`Triggering transfer for ${sw.userId}...`);
 
     const response = await axios.post(`${KH_API}/execute/transfer`, {
-    network: 'sepolia',
-    recipientAddress: sw.beneficiary,
-    amount: sw.amount
+      network: 'sepolia',
+      recipientAddress: sw.beneficiary,
+      amount: sw.amount
     }, { headers: HEADERS });
 
     console.log('KeeperHub response:', JSON.stringify(response.data, null, 2));
@@ -28,7 +28,8 @@ async function executeTransfer(sw) {
 
     sw.txHistory.push(txData);
     sw.status = 'triggered';
-    saveSwitch(sw.userId, sw);
+    await saveSwitch(sw.userId, sw);
+    pollExecutionStatus(sw.userId, response.data.executionId);
 
     console.log(`Transfer triggered for ${sw.userId}. Execution ID: ${response.data.executionId}`);
   } catch (err) {
@@ -36,9 +37,46 @@ async function executeTransfer(sw) {
   }
 }
 
+async function pollExecutionStatus(userId, executionId) {
+  const maxAttempts = 10;
+  let attempts = 0;
+
+  const interval = setInterval(async () => {
+    attempts++;
+    try {
+      const response = await axios.get(
+        `${KH_API}/execute/${executionId}/status`,
+        { headers: HEADERS }
+      );
+
+      const { status, transactionHash } = response.data;
+
+      if (status === 'completed' || status === 'failed') {
+        const sw = await getSwitch(userId);
+        if (sw) {
+          sw.txHistory = sw.txHistory.map(tx =>
+            tx.executionId === executionId
+              ? { ...tx, status, transactionHash }
+              : tx
+          );
+          await saveSwitch(userId, sw);
+          console.log(`Execution ${executionId} resolved: ${status}`);
+        }
+        clearInterval(interval);
+      }
+
+      if (attempts >= maxAttempts) clearInterval(interval);
+
+    } catch (err) {
+      console.error('Polling error:', err.message);
+      clearInterval(interval);
+    }
+  }, 30000);
+}
+
 async function checkSwitches() {
   console.log('Monitor running check...');
-  const switches = getAllSwitches();
+  const switches = await getAllSwitches();
 
   for (const userId in switches) {
     const sw = switches[userId];
@@ -58,7 +96,6 @@ async function checkSwitches() {
 }
 
 function startMonitor() {
-  // Runs every hour
   cron.schedule('0 * * * *', checkSwitches);
   console.log('AfterKey monitor started');
 }
