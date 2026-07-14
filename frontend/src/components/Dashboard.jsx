@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function Dashboard({ switchData, setSwitchData }) {
   const [loading, setLoading] = useState(false)
@@ -6,13 +6,24 @@ function Dashboard({ switchData, setSwitchData }) {
 
   const lastCheckin = new Date(switchData.lastCheckin)
   const deadline = new Date(lastCheckin.getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
-  const now = new Date()
+  const [now, setNow] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   const totalMs = switchData.intervalDays * 24 * 60 * 60 * 1000
   const remainingMs = Math.max(deadline - now, 0)
   const elapsed = Math.min((totalMs - remainingMs) / totalMs, 1)
-  const daysLeft = remainingMs < 1000 * 60 * 60 * 24
-  ? `${Math.ceil(remainingMs / (1000 * 60))}m`
-  : Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+
+  const hours = Math.floor(remainingMs / (1000 * 60 * 60))
+  const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((remainingMs % (1000 * 60)) / 1000)
+
+  const timeDisplay = remainingMs < 1000 * 60 * 60 * 24
+    ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    : `${Math.ceil(remainingMs / (1000 * 60 * 60 * 24))}`
 
   const circumference = 2 * Math.PI * 54
   const strokeDashoffset = circumference * (1 - elapsed)
@@ -57,8 +68,8 @@ function Dashboard({ switchData, setSwitchData }) {
             />
           </svg>
           <div className="ring-label">
-            <span className="days-left">{daysLeft}</span>
-            <span className="days-text">{remainingMs < 1000 * 60 * 60 * 24 ? 'left' : 'days left'}</span>
+            <span className="days-left" style={{ fontSize: remainingMs < 1000 * 60 * 60 * 24 ? '1rem' : '1.8rem' }}>{timeDisplay}</span>
+            <span className="days-text">{remainingMs < 1000 * 60 * 60 * 24 ? 'remaining' : 'days left'}</span>
           </div>
         </div>
 
