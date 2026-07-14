@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 function Dashboard({ switchData, setSwitchData }) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
+  const API_URL = 'https://your-railway-url.up.railway.app'
 
   const lastCheckin = new Date(switchData.lastCheckin)
   const deadline = new Date(lastCheckin.getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
@@ -47,7 +48,14 @@ function Dashboard({ switchData, setSwitchData }) {
     }
   }
 
-  function handleReset() {
+  async function handleReset() {
+    try {
+      await fetch(`${API_URL}/api/switch/${switchData.userId}`, {
+        method: 'DELETE'
+      })
+    } catch (err) {
+      console.error('Failed to delete switch:', err)
+    }
     localStorage.removeItem('afterkey_userId')
     setSwitchData(null)
   }
