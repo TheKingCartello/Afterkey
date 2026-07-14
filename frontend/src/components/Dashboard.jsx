@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 function Dashboard({ switchData, setSwitchData }) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
-  const API_URL = 'https://your-railway-url.up.railway.app'
+  const API_URL = 'https://afterkey-production.up.railway.app'
 
   const lastCheckin = new Date(switchData.lastCheckin)
   const deadline = new Date(lastCheckin.getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
