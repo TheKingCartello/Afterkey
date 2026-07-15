@@ -8,34 +8,47 @@ const HEADERS = {
   'Content-Type': 'application/json'
 };
 
-async function executeTransfer(sw) {
-  try {
-    console.log(`Triggering transfer for ${sw.userId}...`);
+  async function executeTransfer(sw, isRetry = false) {
+    try {
+      console.log(`${isRetry ? 'Retrying' : 'Triggering'} transfer for ${sw.userId}...`);
 
-    const response = await axios.post(`${KH_API}/execute/transfer`, {
-      network: 'sepolia',
-      recipientAddress: sw.beneficiary,
-      amount: sw.amount
-    }, { headers: HEADERS });
+      const response = await axios.post(`${KH_API}/execute/transfer`, {
+        network: 'sepolia',
+        recipientAddress: sw.beneficiary,
+        amount: sw.amount
+      }, { headers: HEADERS });
 
-    console.log('KeeperHub response:', JSON.stringify(response.data, null, 2));
+      console.log('KeeperHub response:', JSON.stringify(response.data, null, 2));
 
-    const txData = {
-      executionId: response.data.executionId,
-      triggeredAt: new Date().toISOString(),
-      status: 'pending'
-    };
+      const txData = {
+        executionId: response.data.executionId,
+        triggeredAt: new Date().toISOString(),
+        status: 'pending',
+        attempt: (sw.retryCount || 0) + 1,
+        error: null
+      };
 
-    sw.txHistory.push(txData);
-    sw.status = 'triggered';
-    await saveSwitch(sw.userId, sw);
-    pollExecutionStatus(sw.userId, response.data.executionId);
+      sw.txHistory.push(txData);
+      sw.status = 'triggered';
+      sw.retryCount = (sw.retryCount || 0) + 1;
+      sw.lastError = null;
+      await saveSwitch(sw.userId, sw);
+      pollExecutionStatus(sw.userId, response.data.executionId);
 
-    console.log(`Transfer triggered for ${sw.userId}. Execution ID: ${response.data.executionId}`);
-  } catch (err) {
-    console.error(`Transfer failed for ${sw.userId}:`, err.response?.data || err.message);
+      console.log(`Transfer triggered for ${sw.userId}. Execution ID: ${response.data.executionId}`);
+      return true;
+
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message;
+      console.error(`Transfer failed for ${sw.userId}:`, errorMsg);
+
+      console.log('Error message being stored:', errorMsg);
+      sw.lastError = errorMsg;
+      sw.status = 'failed';
+      await saveSwitch(sw.userId, sw);
+      return false;
+    }
   }
-}
 
 async function pollExecutionStatus(userId, executionId) {
   const maxAttempts = 10;
@@ -54,21 +67,26 @@ async function pollExecutionStatus(userId, executionId) {
       if (status === 'completed' || status === 'failed') {
         const sw = await getSwitch(userId);
         if (sw) {
-            sw.txHistory = sw.txHistory.map(tx =>
-            tx.executionId === executionId
-              ? { 
-                  ...tx, 
-                  status,
-                  transactionHash,
-                  transactionLink: response.data.transactionLink,
-                  gasUsedWei: response.data.gasUsedWei,
-                  gasPriceWei: response.data.gasPriceWei,
-                  estimatedCostUsd: response.data.estimatedCostUsd,
-                  retryCount: response.data.retryCount,
-                  completedAt: response.data.completedAt
-                }
-              : tx
-          );
+          sw.txHistory = sw.txHistory.map(tx =>
+          tx.executionId === executionId
+            ? { 
+                ...tx, 
+                status,
+                transactionHash: response.data.transactionHash,
+                transactionLink: response.data.transactionLink,
+                gasUsedWei: response.data.gasUsedWei,
+                gasPriceWei: response.data.gasPriceWei,
+                estimatedCostUsd: response.data.estimatedCostUsd,
+                retryCount: response.data.retryCount,
+                completedAt: response.data.completedAt,
+                error: response.data.error || null
+              }
+            : tx
+        );
+        if (status === 'failed') {
+            sw.status = 'failed';
+            sw.lastError = response.data.error || 'Unknown error';
+          }
           await saveSwitch(userId, sw);
           console.log(`Execution ${executionId} resolved: ${status}`);
         }
@@ -90,6 +108,17 @@ async function checkSwitches() {
 
   for (const userId in switches) {
     const sw = switches[userId];
+    const retryCount = sw.retryCount || 0;
+
+    // Auto retry failed switches up to 3 times
+    const lastTx = sw.txHistory?.[sw.txHistory.length - 1]
+    const lastTxFailed = lastTx?.status === 'failed'
+
+    if ((sw.status === 'failed' || lastTxFailed) && retryCount < 3) {
+      console.log(`Auto retrying failed switch for ${userId} (attempt ${retryCount + 1}/3)...`);
+      await executeTransfer(sw, true);
+      continue;
+    }
 
     if (sw.status !== 'active') continue;
 
@@ -110,4 +139,4 @@ function startMonitor() {
   console.log('AfterKey monitor started');
 }
 
-module.exports = { startMonitor, checkSwitches };
+module.exports = { startMonitor, checkSwitches, executeTransfer };

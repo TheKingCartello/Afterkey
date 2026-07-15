@@ -47,7 +47,9 @@ function mapToDB(sw) {
     last_checkin: sw.lastCheckin,
     status: sw.status,
     workflow_id: sw.workflowId,
-    tx_history: sw.txHistory
+    tx_history: sw.txHistory,
+    retry_count: sw.retryCount || 0,
+    last_error: sw.lastError || null
   };
 }
 
@@ -61,7 +63,9 @@ function mapFromDB(row) {
     lastCheckin: row.last_checkin,
     status: row.status,
     workflowId: row.workflow_id,
-    txHistory: row.tx_history || []
+    txHistory: row.tx_history || [],
+    retryCount: row.retry_count || 0,
+    lastError: row.last_error || null
   };
 }
 

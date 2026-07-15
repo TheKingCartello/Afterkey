@@ -14,6 +14,21 @@ function Dashboard({ switchData, setSwitchData }) {
     return () => clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+  const poll = setInterval(async () => {
+    try {
+      const res = await fetch(`https://afterkey-production.up.railway.app/api/switch/${switchData.userId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setSwitchData(data)
+      }
+    } catch (err) {
+      console.error('Polling error:', err)
+    }
+  }, 30000)
+  return () => clearInterval(poll)
+}, [switchData.userId])
+
   const totalMs = switchData.intervalDays * 24 * 60 * 60 * 1000
   const remainingMs = Math.max(deadline - now, 0)
   const elapsed = Math.min((totalMs - remainingMs) / totalMs, 1)
@@ -60,6 +75,24 @@ function Dashboard({ switchData, setSwitchData }) {
     setSwitchData(null)
   }
 
+  async function handleRetry() {
+    setLoading(true)
+    setMessage(null)
+    try {
+      const res = await fetch(`https://afterkey-production.up.railway.app/api/switch/retry/${switchData.userId}`, {
+        method: 'POST'
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setSwitchData(data.switch)
+      setMessage('Retry triggered — check transaction history')
+    } catch (err) {
+      setMessage(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="dashboard">
       <div className="status-card">
@@ -102,6 +135,21 @@ function Dashboard({ switchData, setSwitchData }) {
       </div>
 
       {message && <p className="message">{message}</p>}
+
+      {(switchData.status === 'failed' || (switchData.txHistory.length > 0 && switchData.txHistory[switchData.txHistory.length - 1].status === 'failed')) && (
+        <div className="failure-box">
+          <p className="failure-reason">
+            ⚠️ Last error: {
+                switchData.txHistory?.slice().reverse().find(tx => tx.error)?.error 
+                || switchData.lastError 
+                || 'Unknown error'
+              }
+          </p>
+          <button className="btn-retry" onClick={handleRetry} disabled={loading}>
+            {loading ? 'Retrying...' : 'Retry transfer'}
+          </button>
+        </div>
+      )}
 
       <button className="btn-checkin" onClick={handleCheckin} disabled={loading}>
         {loading ? 'Checking in...' : "I'm alive"}

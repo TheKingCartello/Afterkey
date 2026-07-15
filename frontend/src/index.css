@@ -470,3 +470,33 @@ header {
   margin-top: 0.25rem;
   padding-left: 0.25rem;
 }
+
+.failure-box {
+  background: #1c0a0a;
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.failure-reason {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.btn-retry {
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-retry:hover { opacity: 0.85; }
+.btn-retry:disabled { opacity: 0.5; cursor: not-allowed; }
