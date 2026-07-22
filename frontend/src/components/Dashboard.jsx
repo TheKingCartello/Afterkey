@@ -96,15 +96,21 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
           <div className="ak-left">
             <div className="ring-wrap">
               <svg viewBox="0 0 180 180">
-                <circle cx="90" cy="90" r="76" fill="none" stroke="var(--ring-track)" strokeWidth="8" />
+                <circle
+                  cx="90" cy="90" r="76"
+                  fill="none"
+                  stroke="var(--ring-track)"
+                  strokeWidth="10"
+                />
                 <circle
                   cx="90" cy="90" r="76"
                   fill="none"
                   stroke={ringColor}
-                  strokeWidth="8"
+                  strokeWidth="10"
                   strokeLinecap="round"
                   strokeDasharray={circumference}
                   strokeDashoffset={strokeDashoffset}
+                  transform="rotate(-90 90 90)"
                 />
               </svg>
               <div className="ring-label">

@@ -136,6 +136,7 @@ async function checkSwitches() {
 
 function startMonitor() {
   cron.schedule('* * * * *', checkSwitches);
+  setInterval(checkSwitches, 5000);
   console.log('AfterKey monitor started');
 }
 
