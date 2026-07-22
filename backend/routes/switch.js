@@ -15,7 +15,7 @@ router.post('/create', async (req, res) => {
     intervalDays,
     amount,
     createdAt: new Date().toISOString(),
-    lastCheckin: new Date().toISOString(),
+    lastCheckin: new Date(Date.now() + 30000).toISOString(),
     status: 'active',
     workflowId: null,
     txHistory: []

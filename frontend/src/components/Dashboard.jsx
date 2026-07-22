@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react'
 
-function Dashboard({ switchData, setSwitchData }) {
+function Dashboard({ switchData, setSwitchData, API_URL }) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
-  const API_URL = 'https://afterkey-production.up.railway.app'
-
-  const lastCheckin = new Date(switchData.lastCheckin)
-  const deadline = new Date(lastCheckin.getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -15,20 +11,19 @@ function Dashboard({ switchData, setSwitchData }) {
   }, [])
 
   useEffect(() => {
-  const poll = setInterval(async () => {
-    try {
-      const res = await fetch(`https://afterkey-production.up.railway.app/api/switch/${switchData.userId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setSwitchData(data)
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/switch/${switchData.userId}`)
+        if (res.ok) setSwitchData(await res.json())
+      } catch (err) {
+        console.error('Polling error:', err)
       }
-    } catch (err) {
-      console.error('Polling error:', err)
-    }
-  }, 30000)
-  return () => clearInterval(poll)
-}, [switchData.userId])
+    }, 30000)
+    return () => clearInterval(poll)
+  }, [switchData.userId])
 
+  const lastCheckin = new Date(switchData.lastCheckin)
+  const deadline = new Date(lastCheckin.getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
   const totalMs = switchData.intervalDays * 24 * 60 * 60 * 1000
   const remainingMs = Math.max(deadline - now, 0)
   const elapsed = Math.min((totalMs - remainingMs) / totalMs, 1)
@@ -41,17 +36,22 @@ function Dashboard({ switchData, setSwitchData }) {
     ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
     : `${Math.ceil(remainingMs / (1000 * 60 * 60 * 24))}`
 
-  const circumference = 2 * Math.PI * 54
+  const timeLabel = remainingMs < 1000 * 60 * 60 * 24 ? 'remaining' : 'days left'
+
+  const circumference = 2 * Math.PI * 76
   const strokeDashoffset = circumference * (1 - elapsed)
-  const ringColor = elapsed > 0.8 ? '#EF4444' : elapsed > 0.5 ? '#F59E0B' : '#3B82F6'
+  const ringColor = elapsed > 0.8 ? 'var(--red)' : elapsed > 0.5 ? 'var(--amber)' : 'var(--accent)'
+
+  const lastFailedTx = switchData.txHistory?.slice().reverse().find(tx => tx.error)
+  const showRetry = switchData.status === 'failed' ||
+    (switchData.txHistory?.length > 0 &&
+      switchData.txHistory[switchData.txHistory.length - 1].status === 'failed')
 
   async function handleCheckin() {
     setLoading(true)
     setMessage(null)
     try {
-      const res = await fetch(`https://afterkey-production.up.railway.app/api/checkin/${switchData.userId}`, {
-        method: 'POST'
-      })
+      const res = await fetch(`${API_URL}/api/checkin/${switchData.userId}`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setSwitchData({ ...switchData, lastCheckin: data.lastCheckin })
@@ -63,25 +63,11 @@ function Dashboard({ switchData, setSwitchData }) {
     }
   }
 
-  async function handleReset() {
-    try {
-      await fetch(`${API_URL}/api/switch/${switchData.userId}`, {
-        method: 'DELETE'
-      })
-    } catch (err) {
-      console.error('Failed to delete switch:', err)
-    }
-    localStorage.removeItem('afterkey_userId')
-    setSwitchData(null)
-  }
-
   async function handleRetry() {
     setLoading(true)
     setMessage(null)
     try {
-      const res = await fetch(`https://afterkey-production.up.railway.app/api/switch/retry/${switchData.userId}`, {
-        method: 'POST'
-      })
+      const res = await fetch(`${API_URL}/api/switch/retry/${switchData.userId}`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setSwitchData(data.switch)
@@ -93,94 +79,129 @@ function Dashboard({ switchData, setSwitchData }) {
     }
   }
 
+  async function handleReset() {
+    try {
+      await fetch(`${API_URL}/api/switch/${switchData.userId}`, { method: 'DELETE' })
+    } catch (err) {
+      console.error('Failed to delete switch:', err)
+    }
+    localStorage.removeItem('afterkey_userId')
+    setSwitchData(null)
+  }
+
   return (
-    <div className="dashboard">
-      <div className="status-card">
-        <div className="ring-wrapper">
-          <svg viewBox="0 0 120 120" className="ring">
-            <circle cx="60" cy="60" r="54" className="ring-bg" />
-            <circle
-              cx="60" cy="60" r="54"
-              className="ring-fill"
-              stroke={ringColor}
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              transform="rotate(-90 60 60)"
-            />
-          </svg>
-          <div className="ring-label">
-            <span className="days-left" style={{ fontSize: remainingMs < 1000 * 60 * 60 * 24 ? '1rem' : '1.8rem' }}>{timeDisplay}</span>
-            <span className="days-text">{remainingMs < 1000 * 60 * 60 * 24 ? 'remaining' : 'days left'}</span>
+    <div>
+      <div className="ak-card">
+        <div className="ak-split">
+          <div className="ak-left">
+            <div className="ring-wrap">
+              <svg viewBox="0 0 180 180">
+                <circle cx="90" cy="90" r="76" fill="none" stroke="var(--ring-track)" strokeWidth="8" />
+                <circle
+                  cx="90" cy="90" r="76"
+                  fill="none"
+                  stroke={ringColor}
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                />
+              </svg>
+              <div className="ring-label">
+                <span className="ring-time" style={{ fontSize: remainingMs < 1000 * 60 * 60 * 24 ? '1.1rem' : '1.4rem' }}>
+                  {timeDisplay}
+                </span>
+                <span className="ring-sub">{timeLabel}</span>
+              </div>
+            </div>
+
+            <div className={`ak-status-badge ${switchData.status}`}>
+              <div className="ak-status-dot" />
+              {switchData.status}
+            </div>
+          </div>
+
+          <div className="ak-right">
+            <div className="ak-field">
+              <span className="ak-field-label">Beneficiary</span>
+              <span className="ak-field-val mono">{switchData.beneficiary.slice(0, 6)}...{switchData.beneficiary.slice(-4)}</span>
+            </div>
+            <div className="ak-field">
+              <span className="ak-field-label">Transfer amount</span>
+              <span className="ak-field-val">{switchData.amount} ETH</span>
+            </div>
+            <div className="ak-field">
+              <span className="ak-field-label">Interval</span>
+              <span className="ak-field-val">
+                {switchData.intervalDays === 0.01 ? 'Every 15 min (demo)' :
+                  switchData.intervalDays === 1 ? 'Every day' :
+                    `Every ${switchData.intervalDays} days`}
+              </span>
+            </div>
+            <div className="ak-field">
+              <span className="ak-field-label">Last check-in</span>
+              <span className="ak-field-val">{lastCheckin.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+
+            {message && <p className="ak-message">{message}</p>}
+
+            <button className="btn-alive" onClick={handleCheckin} disabled={loading}>
+              {loading ? 'Checking in...' : "I'm alive →"}
+            </button>
           </div>
         </div>
 
-        <div className="switch-info">
-          <p className="info-row">
-            <span>Status</span>
-            <span className={`badge ${switchData.status}`}>{switchData.status}</span>
-          </p>
-          <p className="info-row">
-            <span>Beneficiary</span>
-            <span className="address">{switchData.beneficiary.slice(0, 6)}...{switchData.beneficiary.slice(-4)}</span>
-          </p>
-          <p className="info-row">
-            <span>Amount</span>
-            <span>{switchData.amount} ETH</span>
-          </p>
-          <p className="info-row">
-            <span>Last check-in</span>
-            <span>{lastCheckin.toLocaleDateString()}</span>
-          </p>
-        </div>
-      </div>
+        {showRetry && (
+          <div className="failure-box">
+            <p className="failure-reason">
+              ⚠ {lastFailedTx?.error || switchData.lastError || 'Transfer failed'}
+            </p>
+            <button className="btn-retry" onClick={handleRetry} disabled={loading}>
+              {loading ? 'Retrying...' : 'Retry transfer'}
+            </button>
+          </div>
+        )}
 
-      {message && <p className="message">{message}</p>}
+        <div className="ak-tx-header">Transaction history</div>
 
-      {(switchData.status === 'failed' || (switchData.txHistory.length > 0 && switchData.txHistory[switchData.txHistory.length - 1].status === 'failed')) && (
-        <div className="failure-box">
-          <p className="failure-reason">
-            ⚠️ Last error: {
-                switchData.txHistory?.slice().reverse().find(tx => tx.error)?.error 
-                || switchData.lastError 
-                || 'Unknown error'
-              }
-          </p>
-          <button className="btn-retry" onClick={handleRetry} disabled={loading}>
-            {loading ? 'Retrying...' : 'Retry transfer'}
-          </button>
-        </div>
-      )}
-
-      <button className="btn-checkin" onClick={handleCheckin} disabled={loading}>
-        {loading ? 'Checking in...' : "I'm alive"}
-      </button>
-
-      <div className="tx-history">
-        <h3>Transaction history</h3>
-        {switchData.txHistory.length === 0
-          ? <p className="empty">No transactions yet. Your switch is watching.</p>
-          : switchData.txHistory.map((tx, i) => (
-            <div className="tx-row" key={i}>
-              <div className="tx-main">
-                <span>{new Date(tx.triggeredAt).toLocaleDateString()}</span>
+        {switchData.txHistory.length === 0 ? (
+          <p className="ak-empty">No transactions yet. Your switch is watching.</p>
+        ) : (
+          switchData.txHistory.map((tx, i) => (
+            <div className="ak-tx-row" key={i}>
+              <div className="ak-tx-main">
+                <span className="ak-tx-date">
+                  {new Date(tx.triggeredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' · '}
+                  {new Date(tx.triggeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
                 <span className={`badge ${tx.status}`}>{tx.status}</span>
                 {tx.transactionLink && (
-                  <a href={tx.transactionLink} target="_blank" rel="noreferrer">View</a>
+                  <a href={tx.transactionLink} target="_blank" rel="noreferrer" className="ak-view-link">
+                    View ↗
+                  </a>
+                )}
+                {tx.attempt && (
+                  <span className="ak-tx-meta">Attempt {tx.attempt}/3</span>
                 )}
               </div>
               {tx.completedAt && (
-                <div className="tx-details">
-                  {tx.retryCount > 0 && <span>🔄 {tx.retryCount} retr{tx.retryCount === 1 ? 'y' : 'ies'}</span>}
-                  {tx.gasUsedWei && <span>⛽ {Number(tx.gasUsedWei).toLocaleString()} wei</span>}
-                  {tx.completedAt && <span>✅ {new Date(tx.completedAt).toLocaleTimeString()}</span>}
+                <div className="ak-tx-details">
+                  {tx.error && <span>⚠ {tx.error}</span>}
+                  {tx.gasUsedWei && !tx.error && <span>{Number(tx.gasUsedWei).toLocaleString()} wei</span>}
+                  {tx.gasUsedWei && !tx.error && <span>sponsored</span>}
+                  <span>✓ {new Date(tx.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                 </div>
               )}
             </div>
           ))
-        }
+        )}
       </div>
 
-      <button className="btn-reset" onClick={handleReset}>Reset switch</button>
+      <div className="ak-footer">
+        <button className="btn-reset" onClick={handleReset}>Reset switch</button>
+        <span className="ak-powered">Executed by <strong>KeeperHub</strong></span>
+      </div>
     </div>
   )
 }
