@@ -22,8 +22,10 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
     return () => clearInterval(poll)
   }, [switchData.userId])
 
-  const lastCheckin = new Date(switchData.lastCheckin)
-  const deadline = new Date(lastCheckin.getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
+  const deadline = switchData.deadline
+  ? new Date(switchData.deadline)
+  : new Date(new Date(switchData.lastCheckin).getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
+
   const totalMs = switchData.intervalDays * 24 * 60 * 60 * 1000
   const remainingMs = Math.max(deadline - now, 0)
   const elapsed = Math.min((totalMs - remainingMs) / totalMs, 1)
@@ -38,7 +40,7 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
 
   const timeLabel = remainingMs < 1000 * 60 * 60 * 24 ? 'remaining' : 'days left'
 
-  const circumference = 2 * Math.PI * 76
+  const circumference = 2 * Math.PI * 54
   const strokeDashoffset = circumference * (1 - elapsed)
   const ringColor = elapsed > 0.8 ? 'var(--red)' : elapsed > 0.5 ? 'var(--amber)' : 'var(--accent)'
 
@@ -54,7 +56,7 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
       const res = await fetch(`${API_URL}/api/checkin/${switchData.userId}`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setSwitchData({ ...switchData, lastCheckin: data.lastCheckin })
+      setSwitchData({ ...switchData, lastCheckin: data.lastCheckin, deadline: data.deadline })
       setMessage('Checked in successfully')
     } catch (err) {
       setMessage(err.message)
@@ -94,32 +96,31 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
       <div className="ak-card">
         <div className="ak-split">
           <div className="ak-left">
-            <div className="ring-wrap">
-              <svg viewBox="0 0 180 180">
-                <circle
-                  cx="90" cy="90" r="76"
-                  fill="none"
-                  stroke="var(--ring-track)"
-                  strokeWidth="10"
-                />
-                <circle
-                  cx="90" cy="90" r="76"
-                  fill="none"
-                  stroke={ringColor}
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  transform="rotate(-90 90 90)"
-                />
-              </svg>
-              <div className="ring-label">
-                <span className="ring-time" style={{ fontSize: remainingMs < 1000 * 60 * 60 * 24 ? '1.1rem' : '1.4rem' }}>
-                  {timeDisplay}
-                </span>
-                <span className="ring-sub">{timeLabel}</span>
-              </div>
+           <div className="ring-wrap">
+            <svg viewBox="0 0 120 120" width="180" height="180" style={{transform: 'rotate(-90deg)'}}>
+              <circle
+                cx="60" cy="60" r="54"
+                fill="none"
+                stroke="var(--ring-track)"
+                strokeWidth="8"
+              />
+              <circle
+                cx="60" cy="60" r="54"
+                fill="none"
+                stroke={ringColor}
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+              />
+            </svg>
+            <div className="ring-label">
+              <span className="ring-time" style={{ fontSize: remainingMs < 1000 * 60 * 60 * 24 ? '1.1rem' : '1.4rem' }}>
+                {timeDisplay}
+              </span>
+              <span className="ring-sub">{timeLabel}</span>
             </div>
+          </div>
 
             <div className={`ak-status-badge ${switchData.status}`}>
               <div className="ak-status-dot" />
@@ -148,6 +149,12 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
               <span className="ak-field-label">Last check-in</span>
               <span className="ak-field-val">{lastCheckin.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
+            <div className="ak-field">
+            <span className="ak-field-label">Triggers at</span>
+            <span className="ak-field-val">
+              {deadline.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
 
             {message && <p className="ak-message">{message}</p>}
 

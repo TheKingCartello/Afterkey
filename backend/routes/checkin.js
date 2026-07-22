@@ -12,6 +12,7 @@ router.post('/:userId', async (req, res) => {
   }
 
   sw.lastCheckin = new Date().toISOString();
+  sw.deadline = new Date(Date.now() + sw.intervalDays * 24 * 60 * 60 * 1000).toISOString()
   await saveSwitch(req.params.userId, sw);
 
   res.json({ message: 'Check-in successful', lastCheckin: sw.lastCheckin });
