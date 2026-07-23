@@ -2,7 +2,7 @@
 
 **Your onchain dead man's switch.**
 
-AfterKey is an AI-powered agent that monitors wallet inactivity and automatically transfers assets to a designated beneficiary address if the owner stops checking in. Built on top of KeeperHub's execution and reliability layer.
+AfterKey is an AI-powered agent that monitors wallet inactivity and automatically transfers assets to designated beneficiary addresses if the owner stops checking in. Built on top of KeeperHub's execution and reliability layer.
 
 ---
 
@@ -15,9 +15,10 @@ Billions in crypto assets are lost every year because owners die or become incap
 ## How It Works
 
 1. **Connect your wallet** — MetaMask or any injected provider
-2. **Set your switch** — choose a beneficiary address, check-in interval, and amount
-3. **Check in regularly** — hit "I'm alive" before your deadline
-4. **Miss a check-in** — AfterKey's agent automatically executes the transfer onchain via KeeperHub
+2. **Create switches** — set a beneficiary address, check-in interval, and amount for each switch
+3. **Manage multiple switches** — create separate switches for different beneficiaries, amounts, and intervals. Check in to all active switches at once with a single click.
+4. **Check in regularly** — hit "I'm alive" before each deadline
+5. **Miss a check-in** — AfterKey's agent automatically executes the transfer onchain via KeeperHub, with up to 3 automatic retries and a manual retry fallback
 
 ---
 
@@ -29,8 +30,9 @@ AfterKey uses KeeperHub as its onchain execution and reliability layer:
 - **Gas Sponsorship** — transactions are sponsored by KeeperHub on Sepolia testnet (`"sponsored": true`)
 - **Audit Trail** — every execution is logged with trigger time, gas used, retry count, transaction hash, and Etherscan link
 - **Execution Status Polling** — AfterKey polls KeeperHub's status endpoint after every transfer to update the audit trail in real time
+- **Automatic Retry Logic** — failed executions are retried up to 3 times automatically, with clear error reporting at each attempt
 
-### Verified Transaction
+### Verified Transactions
 
 Real transfers executed through KeeperHub on Sepolia testnet:
 
@@ -44,7 +46,7 @@ Real transfers executed through KeeperHub on Sepolia testnet:
 
 ## Tech Stack
 
-- **Frontend** — React + Vite, deployed on Vercel
+- **Frontend** — React + Vite + React Router, deployed on Vercel
 - **Backend** — Node.js + Express, deployed on Railway
 - **Database** — Supabase (PostgreSQL)
 - **Agent** — node-cron scheduler with KeeperHub execution
@@ -113,38 +115,41 @@ npm run dev
 ---
 
 ## Project Structure
-
+```
 afterkey/
 ├── backend/
-│   ├── agent/
-│   │   └── monitor.js      # Inactivity monitor + KeeperHub execution
-│   ├── routes/
-│   │   ├── switch.js       # Switch CRUD routes
-│   │   └── checkin.js      # Check-in route
-│   ├── db.js               # Supabase client
-│   └── server.js           # Express server
+│ ├── agent/
+│ │ └── monitor.js # Inactivity monitor + KeeperHub execution + retry logic
+│ ├── routes/
+│ │ ├── switch.js # Switch CRUD routes (multi-switch support)
+│ │ └── checkin.js # Check-in route with deadline reset
+│ ├── db.js # Supabase client
+│ └── server.js # Express server
 ├── frontend/
-│   └── src/
-│       ├── components/
-│       │   ├── Setup.jsx       # Onboarding form
-│       │   ├── Dashboard.jsx   # Live dashboard + audit trail
-│       │   └── HowItWorks.jsx  # Animated onboarding steps
-│       ├── App.jsx
-│       └── index.css
+│ └── src/
+│ ├── components/
+│ │ ├── Setup.jsx # Onboarding form with wallet connect
+│ │ ├── SwitchList.jsx # Multi-switch management page
+│ │ ├── SwitchCard.jsx # Individual switch card with audit trail
+│ │ └── HowItWorks.jsx # Animated onboarding steps
+│ ├── App.jsx
+│ └── index.css
 └── README.md
 
 ---
-
+```
 ## Reliability & Observability
 
 AfterKey is built to understand and handle failure modes:
 
+- **Automatic retries** — failed transfers are retried up to 3 times automatically, one minute apart
+- **Manual retry** — after auto-retries are exhausted, users can trigger a manual retry with one click
+- **Clear error reporting** — every failure surfaces the exact KeeperHub error message (e.g. "Insufficient ETH balance. Have: 0.001, Need: 0.01")
 - **Execution status polling** — checks KeeperHub every 30 seconds until resolved
 - **Gas handling** — delegated entirely to KeeperHub's smart gas estimation
-- **Audit trail** — every transfer logged with full execution details
-- **Persistent storage** — switch state stored in Supabase, survives server restarts
-
----
+- **Audit trail** — every transfer attempt logged with gas used, retry count, timestamps, and Etherscan link
+- **Persistent storage** — switch state stored in Supabase, survives server restarts and redeployments
+- **Real-time countdown** — live timer shows exact time remaining before each switch triggers, updates every second
 
 ---
 
@@ -157,6 +162,7 @@ The current version uses KeeperHub's managed wallet as a custody layer. V2 remov
 - **Per-user balance tracking** — the contract tracks each user's allocated amount independently. Multiple users can run switches simultaneously without shared custody.
 - **On-chain check-ins** — instead of a backend API call, check-ins become signed transactions stored onchain. Fully trustless and verifiable.
 - **Timelock mechanism** — a configurable grace period after the deadline before funds move, giving beneficiaries time to contest.
+- **DeFi integration** — users register their positions (Aave, Uniswap LP, Compound). When a switch triggers, AfterKey withdraws from those positions and sends to the beneficiary — all via KeeperHub's execution layer.
 
 ### V3 — Multi-Asset & Multi-Chain (3–6 months)
 AfterKey becomes an agent that knows where your assets live across the entire onchain ecosystem.
@@ -186,8 +192,8 @@ The switch evolves from time-based to condition-based with full AI reasoning.
 - **Funds & protocols** — teams with significant onchain assets and key-person risk
 
 ### Revenue Model
-- **Freemium** — one active switch, Sepolia testnet only, free forever
-- **Pro ($9/month)** — mainnet support, multiple switches, ERC-20 support, email notifications
+- **Freemium** — unlimited switches on Sepolia testnet, free forever
+- **Pro ($9/month)** — mainnet support, ERC-20 support, email notifications, priority execution
 - **Enterprise ($99/month)** — multi-sig support, DAO treasury management, audit exports, SLA guarantees, custom check-in intervals
 
 ### Why KeeperHub is Central to This
