@@ -22,9 +22,10 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
     return () => clearInterval(poll)
   }, [switchData.userId])
 
+  const lastCheckin = new Date(switchData.lastCheckin)
   const deadline = switchData.deadline
-  ? new Date(switchData.deadline)
-  : new Date(new Date(switchData.lastCheckin).getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
+    ? new Date(switchData.deadline)
+    : new Date(lastCheckin.getTime() + switchData.intervalDays * 24 * 60 * 60 * 1000)
 
   const totalMs = switchData.intervalDays * 24 * 60 * 60 * 1000
   const remainingMs = Math.max(deadline - now, 0)
@@ -96,31 +97,31 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
       <div className="ak-card">
         <div className="ak-split">
           <div className="ak-left">
-           <div className="ring-wrap">
-            <svg viewBox="0 0 120 120" width="180" height="180" style={{transform: 'rotate(-90deg)'}}>
-              <circle
-                cx="60" cy="60" r="54"
-                fill="none"
-                stroke="var(--ring-track)"
-                strokeWidth="8"
-              />
-              <circle
-                cx="60" cy="60" r="54"
-                fill="none"
-                stroke={ringColor}
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-              />
-            </svg>
-            <div className="ring-label">
-              <span className="ring-time" style={{ fontSize: remainingMs < 1000 * 60 * 60 * 24 ? '1.1rem' : '1.4rem' }}>
-                {timeDisplay}
-              </span>
-              <span className="ring-sub">{timeLabel}</span>
+            <div className="ring-wrap">
+              <svg viewBox="0 0 120 120" width="180" height="180" style={{ transform: 'rotate(-90deg)' }}>
+                <circle
+                  cx="60" cy="60" r="54"
+                  fill="none"
+                  stroke="var(--ring-track)"
+                  strokeWidth="8"
+                />
+                <circle
+                  cx="60" cy="60" r="54"
+                  fill="none"
+                  stroke={ringColor}
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                />
+              </svg>
+              <div className="ring-label">
+                <span className="ring-time" style={{ fontSize: remainingMs < 1000 * 60 * 60 * 24 ? '1.1rem' : '1.4rem' }}>
+                  {timeDisplay}
+                </span>
+                <span className="ring-sub">{timeLabel}</span>
+              </div>
             </div>
-          </div>
 
             <div className={`ak-status-badge ${switchData.status}`}>
               <div className="ak-status-dot" />
@@ -147,14 +148,16 @@ function Dashboard({ switchData, setSwitchData, API_URL }) {
             </div>
             <div className="ak-field">
               <span className="ak-field-label">Last check-in</span>
-              <span className="ak-field-val">{lastCheckin.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              <span className="ak-field-val">
+                {lastCheckin.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
             </div>
             <div className="ak-field">
-            <span className="ak-field-label">Triggers at</span>
-            <span className="ak-field-val">
-              {deadline.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
+              <span className="ak-field-label">Triggers at</span>
+              <span className="ak-field-val">
+                {deadline.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
 
             {message && <p className="ak-message">{message}</p>}
 

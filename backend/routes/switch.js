@@ -16,7 +16,7 @@ router.post('/create', async (req, res) => {
     amount,
     createdAt: new Date().toISOString(),
     lastCheckin: new Date(Date.now() + 30000).toISOString(),
-    deadline: new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000).toISOString(),
+    deadline: new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000 + 60000).toISOString(),
     status: 'active',
     workflowId: null,
     txHistory: []

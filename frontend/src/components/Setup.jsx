@@ -90,7 +90,7 @@ function Setup({ setSwitchData, API_URL }) {
           <div className="field-group">
             <label>Check-in interval</label>
             <select name="intervalDays" value={form.intervalDays} onChange={handleChange}>
-              <option value={0.01}>Every 15 minutes (demo)</option>
+              <option value={0.010417}>Every 15 minutes (demo)</option>
               <option value={1}>Every day</option>
               <option value={7}>Every 7 days</option>
               <option value={14}>Every 14 days</option>
