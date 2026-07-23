@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getSwitch, saveSwitch, deleteSwitch } = require('../db');
+const { getSwitch, getSwitchesByUser, saveSwitch, deleteSwitch, generateSwitchId } = require('../db');
 
+// Create a new switch
 router.post('/create', async (req, res) => {
   const { userId, beneficiary, intervalDays, amount } = req.body;
 
@@ -9,50 +10,60 @@ router.post('/create', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  const switchId = generateSwitchId();
+  const now = Date.now();
+
   const switchData = {
+    switchId,
     userId,
     beneficiary,
     intervalDays,
     amount,
-    createdAt: new Date().toISOString(),
-    lastCheckin: new Date(Date.now() + 30000).toISOString(),
-    deadline: new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000 + 60000).toISOString(),
+    createdAt: new Date(now).toISOString(),
+    lastCheckin: new Date(now).toISOString(),
+    deadline: new Date(now + intervalDays * 24 * 60 * 60 * 1000).toISOString(),
     status: 'active',
     workflowId: null,
-    txHistory: []
+    txHistory: [],
+    retryCount: 0,
+    lastError: null
   };
 
-  await saveSwitch(userId, switchData);
-
+  await saveSwitch(switchId, switchData);
   res.json({ message: 'Switch created successfully', switch: switchData });
 });
 
-router.post('/retry/:userId', async (req, res) => {
-  const sw = await getSwitch(req.params.userId);
-  if (!sw) return res.status(404).json({ error: 'Switch not found' });
-
-  if (sw.status !== 'failed') {
-    return res.status(400).json({ error: 'Switch is not in a failed state' });
-  }
-
-  const { executeTransfer } = require('../agent/monitor');
-  await executeTransfer(sw, true);
-
-  const updated = await getSwitch(req.params.userId);
-  res.json({ message: 'Retry triggered', switch: updated });
+// Get all switches for a user
+router.get('/user/:userId', async (req, res) => {
+  const switches = await getSwitchesByUser(req.params.userId);
+  res.json(switches);
 });
 
-router.get('/:userId', async (req, res) => {
-  const sw = await getSwitch(req.params.userId);
+// Get a single switch
+router.get('/:switchId', async (req, res) => {
+  const sw = await getSwitch(req.params.switchId);
   if (!sw) return res.status(404).json({ error: 'Switch not found' });
   res.json(sw);
 });
 
-router.delete('/:userId', async (req, res) => {
-  const sw = await getSwitch(req.params.userId);
+// Delete a switch
+router.delete('/:switchId', async (req, res) => {
+  const sw = await getSwitch(req.params.switchId);
   if (!sw) return res.status(404).json({ error: 'Switch not found' });
-  await deleteSwitch(req.params.userId);
+  await deleteSwitch(req.params.switchId);
   res.json({ message: 'Switch deleted' });
+});
+
+// Retry a failed switch
+router.post('/retry/:switchId', async (req, res) => {
+  const sw = await getSwitch(req.params.switchId);
+  if (!sw) return res.status(404).json({ error: 'Switch not found' });
+
+  const { executeTransfer } = require('../agent/monitor');
+  await executeTransfer(sw, true);
+
+  const updated = await getSwitch(req.params.switchId);
+  res.json({ message: 'Retry triggered', switch: updated });
 });
 
 module.exports = router;

@@ -1,30 +1,41 @@
 const { createClient } = require('@supabase/supabase-js');
+const { v4: uuidv4 } = require('uuid');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
 
-async function getSwitch(userId) {
+async function getSwitchesByUser(userId) {
   const { data } = await supabase
     .from('switches')
     .select('*')
     .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return (data || []).map(mapFromDB);
+}
+
+async function getSwitch(switchId) {
+  const { data } = await supabase
+    .from('switches')
+    .select('*')
+    .eq('switch_id', switchId)
     .single();
   return data ? mapFromDB(data) : null;
 }
 
-async function saveSwitch(userId, sw) {
-  await supabase
+async function saveSwitch(switchId, sw) {
+  const { error } = await supabase
     .from('switches')
-    .upsert(mapToDB(sw), {onConflict: 'user_id'});
+    .upsert(mapToDB(sw), { onConflict: 'switch_id' });
+  if (error) console.error('Supabase save error:', error);
 }
 
-async function deleteSwitch(userId) {
+async function deleteSwitch(switchId) {
   await supabase
     .from('switches')
     .delete()
-    .eq('user_id', userId);
+    .eq('switch_id', switchId);
 }
 
 async function getAllSwitches() {
@@ -32,13 +43,17 @@ async function getAllSwitches() {
     .from('switches')
     .select('*');
   const result = {};
-  (data || []).forEach(row => result[row.user_id] = mapFromDB(row));
+  (data || []).forEach(row => result[row.switch_id] = mapFromDB(row));
   return result;
 }
 
-// Supabase uses snake_case columns, our app uses camelCase — these convert between them
+function generateSwitchId() {
+  return uuidv4();
+}
+
 function mapToDB(sw) {
   return {
+    switch_id: sw.switchId,
     user_id: sw.userId,
     beneficiary: sw.beneficiary,
     interval_days: sw.intervalDays,
@@ -56,6 +71,7 @@ function mapToDB(sw) {
 
 function mapFromDB(row) {
   return {
+    switchId: row.switch_id,
     userId: row.user_id,
     beneficiary: row.beneficiary,
     intervalDays: row.interval_days,
@@ -71,4 +87,4 @@ function mapFromDB(row) {
   };
 }
 
-module.exports = { getSwitch, saveSwitch, deleteSwitch, getAllSwitches };
+module.exports = { getSwitchesByUser, getSwitch, saveSwitch, deleteSwitch, getAllSwitches, generateSwitchId };
